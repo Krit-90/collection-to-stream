@@ -1,10 +1,12 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class StreamTask {
+    private static long startTimeStream;
+    private static long endTimeStream;
+    private static long startTimeParallelStream;
+    private static long endTimeParallelStream;
+
     public static void main(String[] args) {
         List<Book> bookListOfPushkin = new ArrayList<Book>();
         Author pushkin = new Author("Pushkin", (short) 33, bookListOfPushkin);
@@ -44,18 +46,48 @@ public class StreamTask {
         Author[] authors = {pushkin, bulgakov, lermontov};
         Book[] books = {book1, book2, book3, book4};
         boolean isMoreThanTwoHundred = Arrays.stream(books).anyMatch(book -> book.getNumberOfPages() > 200);
-        int maxCountPages = Arrays.stream(books).map(Book::getNumberOfPages).collect(Collectors.toList()).stream()
-                .max(Integer::compareTo).orElseThrow();
-        int minCountPages = Arrays.stream(books).map(Book::getNumberOfPages).collect(Collectors.toList()).stream()
-                .min(Integer::compareTo).orElseThrow();
-        List<Book> withSingleAuthor = Arrays.stream(books).filter(book -> book.getAuthors().size() == 1)
-                .collect(Collectors.toList());
+        System.out.println("Any book with more than 200 hundreds pages is " + isMoreThanTwoHundred + "\n");
+        Book maxCountPagesBook = Arrays.stream(books).max(Comparator.comparingInt(Book::getNumberOfPages))
+                .orElse(null);
+        System.out.println("Book with max number of pages is " + maxCountPagesBook);
+        Book minCountPagesBook = Arrays.stream(books).min(Comparator.comparingInt(Book::getNumberOfPages))
+                .orElse(null);
+        System.out.println("Book with min number of pages is " + minCountPagesBook + "\n");
+
+        List<Book> withSingleAuthor = withSingleAuthorUseStream(books);
+        System.out.println("Books with a single author is " + withSingleAuthor + " it takes "
+                + (endTimeStream - startTimeStream) + " nanoseconds with ordinary stream");
+
+        List<Book> withSingleAuthorUseParallelStream = withSingleAuthorUseParallelStream(books);
+        System.out.println("Books with a single author is " + withSingleAuthorUseParallelStream + " it takes "
+                + (endTimeParallelStream - startTimeParallelStream) + " nanoseconds with parallel stream" + "\n");
+
         List<Book> sortedByNumberOfPages = Arrays.stream(books).sorted(Comparator.comparingInt(Book::getNumberOfPages))
                 .collect(Collectors.toList());
+        System.out.println("Sorted list by count of pages " + sortedByNumberOfPages + "\n");
         Arrays.stream(books).map(Book::getTitle).forEach(System.out::println);
-        List<Author> authorList = Arrays.stream(books).flatMap(book -> book.getAuthors().stream()).distinct()
-                .collect(Collectors.toList());
-        pushkin.getBooks().stream().max(Comparator.comparingInt(Book::getNumberOfPages))
-                .ifPresent(book -> System.out.println(book.getTitle()));
+        System.out.println();
+        List<Author> authorList = Arrays.stream(books).flatMap(book -> book.getAuthors().stream()).distinct().
+                peek(System.out::println).collect(Collectors.toList());
+        System.out.println();
+        Optional<String> titleOfBiggestBook = pushkin.getBooks().stream().
+                max(Comparator.comparingInt(Book::getNumberOfPages)).map(Book::getTitle);
     }
+
+    public static List<Book> withSingleAuthorUseStream(Book[] books) {
+        startTimeStream = System.nanoTime();
+        List <Book> bookList = Arrays.stream(books).filter(book -> book.getAuthors().size() == 1)
+                .collect(Collectors.toList());
+        endTimeStream = System.nanoTime();
+        return  bookList;
+    }
+
+    public static List<Book> withSingleAuthorUseParallelStream(Book[] books) {
+        startTimeParallelStream = System.nanoTime();
+        List <Book> bookList = Arrays.stream(books).parallel().filter(book -> book.getAuthors().size() == 1)
+                .collect(Collectors.toList());
+        endTimeParallelStream = System.nanoTime();
+        return  bookList;
+    }
+
 }
